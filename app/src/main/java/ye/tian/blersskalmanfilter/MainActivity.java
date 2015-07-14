@@ -34,6 +34,7 @@ public class MainActivity extends ActionBarActivity {
     private ChartView chartView;
     private ArrayList<String> macList = new ArrayList<>();
     private ArrayList<Integer> rssList = new ArrayList<>();
+    //    private ArrayList<Integer> indList = new ArrayList<>();
     private ArrayList<State> kfList = new ArrayList<>();
     private int timer = 0;
     private BluetoothAdapter btAdapter;
@@ -64,6 +65,9 @@ public class MainActivity extends ActionBarActivity {
                             State s = new State(a, h, q, r, p, x, z, System.currentTimeMillis());
                             kfList.add(kalmanFilter(s));
                         }
+                        while (kfList.get(kfList.size() - 1).t - kfList.get(0).t > 100000) {
+                            kfList.remove(0);
+                        }
                         Log.d("Rss Filtered:", Double.toString(-kfList.get(kfList.size() - 1).x));
                         chartView.onChart();
                         timer += 1;
@@ -72,6 +76,7 @@ public class MainActivity extends ActionBarActivity {
             });
         }
     };
+    private Runnable scanRunnable;
 
     private State kalmanFilter(State s) {
         s.x = s.a* s.x;
@@ -119,23 +124,23 @@ public class MainActivity extends ActionBarActivity {
         btAdapter = BluetoothAdapter.getDefaultAdapter();
         checkBLE();
         if (enableBLE()) {
-//            btAdapter.startLeScan(leScanCallback);
-            scanHandler.post(scanRunnable);
+            btAdapter.startLeScan(leScanCallback);
+//            scanHandler.post(scanRunnable);
         }
     }
 
     @Override
     protected void onResume() {
-//        btAdapter.startLeScan(leScanCallback);
         updateSettings();
-        scanHandler.post(scanRunnable);
+        btAdapter.startLeScan(leScanCallback);
+//        scanHandler.post(scanRunnable);
         super.onResume();
     }
 
     @Override
     protected void onPause() {
-//        btAdapter.stopLeScan(leScanCallback);
-        scanHandler.removeCallbacks(scanRunnable);
+        btAdapter.stopLeScan(leScanCallback);
+//        scanHandler.removeCallbacks(scanRunnable);
         super.onPause();
     }
 
@@ -189,17 +194,12 @@ public class MainActivity extends ActionBarActivity {
             macList.add(mac);
         }
 
-        Float value_a = Float.parseFloat(sharedPrefs.getString("pref_value_a", "-20"));
-        model_a = value_a;
-        Float value_b = Float.parseFloat(sharedPrefs.getString("pref_value_b", "5"));
-        model_b = value_b;
-        Float value_scan_rate = Float.parseFloat(sharedPrefs.getString("pref_value_scan_rate", "1"));
-        SCAN_INTERVAL_MS = (long) (1000/value_scan_rate/4);
-        STOP_INTERVAL_MS = (long) (3000/value_scan_rate/4);
+        model_a = Float.parseFloat(sharedPrefs.getString("pref_value_a", "-20"));
+        model_b = Float.parseFloat(sharedPrefs.getString("pref_value_b", "5"));
+        SCAN_INTERVAL_MS = Long.parseLong(sharedPrefs.getString("pref_value_scan_time", "1000"));
+        STOP_INTERVAL_MS = Long.parseLong(sharedPrefs.getString("pref_value_stop_time", "1000"));
 
     }
-
-    private Runnable scanRunnable;
 
     private void checkBLE() {
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -220,18 +220,17 @@ public class MainActivity extends ActionBarActivity {
 
     public class ChartView extends View {
 
+        private static final int INVALID_POINTER_ID = -1;
+        int win_n = 70;
         private ArrayList<Path> pathList = new ArrayList<>();
         private ArrayList<Paint> pathPaintList = new ArrayList<>();
         private ArrayList<PointF> pointList = new ArrayList<>();
         private Bitmap grid;
         private Paint paintCircle = new Paint();
-        int win_n = 70;
-
         private float mPosX;
         private float mPosY;
         private float mLastTouchX;
         private float mLastTouchY;
-        private static final int INVALID_POINTER_ID = -1;
         private int mActivePointerId = INVALID_POINTER_ID;
         private ScaleGestureDetector mScaleDetector;
         private float mScaleFactor = 1.f;
@@ -243,42 +242,61 @@ public class MainActivity extends ActionBarActivity {
         }
 
         private void createLines() {
-
-            if (rssList.size() < win_n + 1) {
-                for (int i = 0; i < pathList.size(); i++) {
-                    pathList.get(i).lineTo(10 * timer, (float) (-10 * kfList.get(timer).x));
-                }
-
-                while (macList.size() > pathList.size()) {
-                    pathList.add(new Path());
-                    pathList.get(pathList.size() - 1).moveTo(10 * timer, (float) (-10 * kfList.get(timer).x));
-
-                    pathPaintList.add(new Paint());
+            while (macList.size() > pathList.size()) {
+                pathList.add(new Path());
+                pathPaintList.add(new Paint());
                     pathPaintList.get(pathPaintList.size() - 1).setAntiAlias(true);
                     pathPaintList.get(pathPaintList.size() - 1).setColor(Color.rgb((int) (Math.random() * 256), (int) (Math.random() * 256), (int) (Math.random() * 256)));
                     pathPaintList.get(pathPaintList.size() - 1).setStrokeWidth((float) 3.0);
                     pathPaintList.get(pathPaintList.size() - 1).setStyle(Paint.Style.STROKE);
                     pathPaintList.get(pathPaintList.size() - 1).setStrokeWidth(5f);
-
-                }
-            } else {
-                pathList.get(0).reset();
-                pathList.get(0).moveTo(0, (float) (-10 * kfList.get(rssList.size() - win_n).x));
-                for (int i = 0; i < win_n - 1; i++) {
-                    pathList.get(0).lineTo(10 * (i + 1), (float) (-10 * kfList.get(rssList.size() - win_n + 1 + i).x));
-                }
             }
+            pathList.get(0).reset();
+            pathList.get(0).moveTo(0, (float) (-10 * kfList.get(0).x));
+            for (int i = 1; i < kfList.size(); i++) {
+                pathList.get(0).lineTo((kfList.get(i).t - kfList.get(0).t) / 100, (float) (-10 * kfList.get(i).x));
+            }
+
+//            if (rssList.size() < win_n + 1) {
+//                for (int i = 0; i < pathList.size(); i++) {
+//                    pathList.get(i).lineTo(10 * timer, (float) (-10 * kfList.get(timer).x));
+//                }
+//
+//                while (macList.size() > pathList.size()) {
+//                    pathList.add(new Path());
+//                    pathList.get(pathList.size() - 1).moveTo(10 * timer, (float) (-10 * kfList.get(timer).x));
+//
+//                    pathPaintList.add(new Paint());
+//                    pathPaintList.get(pathPaintList.size() - 1).setAntiAlias(true);
+//                    pathPaintList.get(pathPaintList.size() - 1).setColor(Color.rgb((int) (Math.random() * 256), (int) (Math.random() * 256), (int) (Math.random() * 256)));
+//                    pathPaintList.get(pathPaintList.size() - 1).setStrokeWidth((float) 3.0);
+//                    pathPaintList.get(pathPaintList.size() - 1).setStyle(Paint.Style.STROKE);
+//                    pathPaintList.get(pathPaintList.size() - 1).setStrokeWidth(5f);
+//
+//                }
+//            } else {
+//                pathList.get(0).reset();
+//                pathList.get(0).moveTo(0, (float) (-10 * kfList.get(rssList.size() - win_n).x));
+//                for (int i = 0; i < win_n - 1; i++) {
+//                    pathList.get(0).lineTo(10 * (i + 1), (float) (-10 * kfList.get(rssList.size() - win_n + 1 + i).x));
+//                }
+//            }
         }
 
         private void createPoints() {
-            if (rssList.size() < win_n + 1) {
-                pointList.add(new PointF(10 * timer, 10 * rssList.get(timer)));
-            } else {
-                pointList.clear();
-                for (int i = 0; i < win_n; i++) {
-                    pointList.add(new PointF(10 * i, 10 * rssList.get(rssList.size() - win_n + i)));
-                }
+            pointList.clear();
+            for (int i = 0; i < kfList.size(); i++) {
+                pointList.add(new PointF((float) (kfList.get(i).t - kfList.get(0).t) / 100, (float) (-10 * kfList.get(i).z)));
             }
+//
+//            if (rssList.size() < win_n + 1) {
+//                pointList.add(new PointF(10 * timer, 10 * rssList.get(timer)));
+//            } else {
+//                pointList.clear();
+//                for (int i = 0; i < win_n; i++) {
+//                    pointList.add(new PointF(10 * i, 10 * rssList.get(rssList.size() - win_n + i)));
+//                }
+//            }
         }
 
         protected void onDraw(Canvas canvas) {
