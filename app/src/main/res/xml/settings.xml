@@ -10,22 +10,22 @@
         android:title="MAC address" />
     <EditTextPreference
         android:name="Value A"
-        android:inputType="numberDecimal"
+        android:inputType="numberDecimal|numberSigned"
         android:key="pref_value_a"
         android:title="Set system noise parameter a" />
     <EditTextPreference
         android:name="Value B"
-        android:inputType="numberDecimal"
+        android:inputType="numberDecimal|numberSigned"
         android:key="pref_value_b"
         android:title="Set system noise parameter b" />
     <EditTextPreference
         android:name="Scan Time"
-        android:inputType="numberDecimal"
+        android:inputType="numberDecimal|numberSigned"
         android:key="pref_value_scan_time"
         android:title="Set scan time" />
     <EditTextPreference
         android:name="Stop Time"
-        android:inputType="numberDecimal"
+        android:inputType="numberDecimal|numberSigned"
         android:key="pref_value_stop_time"
         android:title="Set stop time" />
 
