@@ -45,6 +45,7 @@ public class MainActivity extends ActionBarActivity {
     private long STOP_INTERVAL_MS;
     private boolean isScanning = false;
     private Handler scanHandler;
+    private boolean continuousScan = true;
 
     private BluetoothAdapter.LeScanCallback leScanCallback = new BluetoothAdapter.LeScanCallback() {
         @Override
@@ -60,8 +61,11 @@ public class MainActivity extends ActionBarActivity {
                             State s = new State(a, h, q, r, p, x, z, currentTimeMillis);
                             kfList.add(kalmanFilter(s));
                         } else {
-                            double drv_rss = (10*model_b/Math.log(10))*Math.pow(10,((kfList.get(kfList.size()-1).x-model_a)/10/model_b));
-                            double a = kfList.get(kfList.size()-1).a, h = kfList.get(kfList.size()-1).h, q = Math.pow(drv_rss,2)*(currentTimeMillis-kfList.get(kfList.size()-1).t)/1000, r = kfList.get(kfList.size()-1).r, z = rssi, x = kfList.get(kfList.size()-1).x, p = kfList.get(kfList.size()-1).p;
+                            double drv_rss = (10 * model_b / Math.log(10)) * Math.pow(10, ((kfList.get(kfList.size() - 1).x - model_a) / 10 / model_b));
+                            double a = kfList.get(kfList.size() - 1).a, h = kfList.get(kfList.size() - 1).h, q = Math.pow(drv_rss, 2) * (currentTimeMillis - kfList.get(kfList.size() - 1).t) / 1000, r = kfList.get(kfList.size() - 1).r, z = rssi, x = kfList.get(kfList.size() - 1).x, p = kfList.get(kfList.size() - 1).p;
+                            Log.d("Rss Filter a value:", Double.toString(model_a));
+                            Log.d("Rss Filter b value:", Double.toString(model_b));
+                            Log.d("Rss Filter Q value:", Double.toString(q));
                             State s = new State(a, h, q, r, p, x, z, System.currentTimeMillis());
                             kfList.add(kalmanFilter(s));
                         }
@@ -79,11 +83,11 @@ public class MainActivity extends ActionBarActivity {
     private Runnable scanRunnable;
 
     private State kalmanFilter(State s) {
-        s.x = s.a* s.x;
+        s.x = s.a * s.x;
         s.p = s.a * s.p * s.a + s.q;
-        double k = s.p* s.h/(s.h* s.p* s.h+ s.r);
-        s.x = s.x + k*(s.z- s.h* s.x);
-        s.p = s.p - k* s.h* s.p;
+        double k = s.p * s.h / (s.h * s.p * s.h + s.r);
+        s.x = s.x + k * (s.z - s.h * s.x);
+        s.p = s.p - k * s.h * s.p;
         return s;
     }
 
@@ -102,7 +106,7 @@ public class MainActivity extends ActionBarActivity {
 
         updateSettings();
 
-        scanHandler  = new Handler();
+        scanHandler = new Handler();
         scanRunnable = new Runnable() {
             @Override
             public void run() {
@@ -112,7 +116,7 @@ public class MainActivity extends ActionBarActivity {
                     btAdapter.stopLeScan(leScanCallback);
                     scanHandler.postDelayed(this, STOP_INTERVAL_MS);
                 } else {
-                    Log.d("State: ","Scan");
+                    Log.d("State: ", "Scan");
                     Log.d("Scan Time: ", Long.toString(SCAN_INTERVAL_MS));
                     btAdapter.startLeScan(leScanCallback);
                     scanHandler.postDelayed(this, SCAN_INTERVAL_MS);
@@ -124,23 +128,28 @@ public class MainActivity extends ActionBarActivity {
         btAdapter = BluetoothAdapter.getDefaultAdapter();
         checkBLE();
         if (enableBLE()) {
-            btAdapter.startLeScan(leScanCallback);
-//            scanHandler.post(scanRunnable);
+            if (continuousScan)
+                btAdapter.startLeScan(leScanCallback);
+            else
+                scanHandler.post(scanRunnable);
         }
     }
 
     @Override
     protected void onResume() {
-        updateSettings();
-        btAdapter.startLeScan(leScanCallback);
-//        scanHandler.post(scanRunnable);
+        if (continuousScan)
+            btAdapter.startLeScan(leScanCallback);
+        else
+            scanHandler.post(scanRunnable);
         super.onResume();
     }
 
     @Override
     protected void onPause() {
-        btAdapter.stopLeScan(leScanCallback);
-//        scanHandler.removeCallbacks(scanRunnable);
+        if (continuousScan)
+            btAdapter.stopLeScan(leScanCallback);
+        else
+            scanHandler.removeCallbacks(scanRunnable);
         super.onPause();
     }
 
@@ -194,6 +203,8 @@ public class MainActivity extends ActionBarActivity {
             macList.add(mac);
         }
 
+        continuousScan = sharedPrefs.getBoolean("switch_continuous_scan_on_off", true);
+
         model_a = Float.parseFloat(sharedPrefs.getString("pref_value_a", "-20"));
         model_b = Float.parseFloat(sharedPrefs.getString("pref_value_b", "5"));
         SCAN_INTERVAL_MS = Long.parseLong(sharedPrefs.getString("pref_value_scan_time", "1000"));
@@ -245,11 +256,11 @@ public class MainActivity extends ActionBarActivity {
             while (macList.size() > pathList.size()) {
                 pathList.add(new Path());
                 pathPaintList.add(new Paint());
-                    pathPaintList.get(pathPaintList.size() - 1).setAntiAlias(true);
-                    pathPaintList.get(pathPaintList.size() - 1).setColor(Color.rgb((int) (Math.random() * 256), (int) (Math.random() * 256), (int) (Math.random() * 256)));
-                    pathPaintList.get(pathPaintList.size() - 1).setStrokeWidth((float) 3.0);
-                    pathPaintList.get(pathPaintList.size() - 1).setStyle(Paint.Style.STROKE);
-                    pathPaintList.get(pathPaintList.size() - 1).setStrokeWidth(5f);
+                pathPaintList.get(pathPaintList.size() - 1).setAntiAlias(true);
+                pathPaintList.get(pathPaintList.size() - 1).setColor(Color.rgb((int) (Math.random() * 256), (int) (Math.random() * 256), (int) (Math.random() * 256)));
+                pathPaintList.get(pathPaintList.size() - 1).setStrokeWidth((float) 3.0);
+                pathPaintList.get(pathPaintList.size() - 1).setStyle(Paint.Style.STROKE);
+                pathPaintList.get(pathPaintList.size() - 1).setStrokeWidth(5f);
             }
             pathList.get(0).reset();
             pathList.get(0).moveTo(0, (float) (-10 * kfList.get(0).x));
@@ -303,7 +314,7 @@ public class MainActivity extends ActionBarActivity {
             super.onDraw(canvas);
             canvas.translate(mPosX, mPosY);
             canvas.scale(mScaleFactor, mScaleFactor, 0, 0);
-            canvas.drawBitmap(grid,0,0,null);
+            canvas.drawBitmap(grid, 0, 0, null);
             for (int i = 0; i < pathList.size(); i++) {
                 canvas.drawPath(pathList.get(i), pathPaintList.get(i));
             }

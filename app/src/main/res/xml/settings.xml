@@ -18,6 +18,10 @@
         android:inputType="numberDecimal|numberSigned"
         android:key="pref_value_b"
         android:title="Set system noise parameter b" />
+    <SwitchPreference
+        android:defaultValue="true"
+        android:key="switch_continuous_scan_on_off"
+        android:title="Continuous scanning" />
     <EditTextPreference
         android:name="Scan Time"
         android:inputType="numberDecimal|numberSigned"
