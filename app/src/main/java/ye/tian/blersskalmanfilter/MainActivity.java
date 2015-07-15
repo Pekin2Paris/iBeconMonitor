@@ -183,13 +183,14 @@ public class MainActivity extends ActionBarActivity {
         switch (requestCode) {
             case REQUEST_ENABLE_BT:
                 if (resultCode == RESULT_OK) {
-//                    btAdapter.startLeScan(leScanCallback);
-                    scanHandler.post(scanRunnable);
+                    if (continuousScan)
+                        btAdapter.startLeScan(leScanCallback);
+                    else
+                        scanHandler.post(scanRunnable);
                 } else enableBLE();
                 break;
             case RESULT_SETTINGS:
                 updateSettings();
-//                scanHandler.post(scanRunnable);
                 break;
         }
     }
@@ -221,7 +222,7 @@ public class MainActivity extends ActionBarActivity {
 
     private boolean enableBLE() {
         boolean ret = true;
-        while (btAdapter == null || !btAdapter.isEnabled()) {
+        if (btAdapter == null || !btAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
             ret = false;
