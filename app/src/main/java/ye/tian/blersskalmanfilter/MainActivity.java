@@ -1,5 +1,6 @@
 package ye.tian.blersskalmanfilter;
 
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
@@ -24,11 +25,12 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends Activity {
 
     private static final int RESULT_SETTINGS = 1, REQUEST_ENABLE_BT = 2;
     private ChartView chartView;
@@ -96,6 +98,7 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
 
 //        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         chartView = new ChartView(this);
         chartView.setBackgroundColor(Color.WHITE);
@@ -239,6 +242,7 @@ public class MainActivity extends ActionBarActivity {
         private ArrayList<PointF> pointList = new ArrayList<>();
         private Bitmap grid;
         private Paint paintCircle = new Paint();
+        private Paint paintText = new Paint();
         private float mPosX;
         private float mPosY;
         private float mLastTouchX;
@@ -250,6 +254,8 @@ public class MainActivity extends ActionBarActivity {
         public ChartView(Context context) {
             super(context);
             grid = BitmapFactory.decodeResource(context.getResources(), R.drawable.grid);
+            paintText.setColor(Color.RED);
+            paintText.setTextSize(60);
             mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
         }
 
@@ -316,6 +322,12 @@ public class MainActivity extends ActionBarActivity {
             canvas.translate(mPosX, mPosY);
             canvas.scale(mScaleFactor, mScaleFactor, 0, 0);
             canvas.drawBitmap(grid, 0, 0, null);
+            if (kfList.size() > 1) {
+                canvas.drawText(String.format("%.2f", kfList.size() * 1000.f / (kfList.get(kfList.size() - 1).t - kfList.get(0).t)), 0, 40, paintText);
+//                Log.d("kfList_Size:", Integer.toString(kfList.size()));
+//                Log.d("kfList_TimeDiff:", Long.toString(kfList.get(kfList.size() - 1).t - kfList.get(0).t));
+//                Log.d("kfList_updrate:", Float.toString(kfList.size() * 1000.f / (kfList.get(kfList.size() - 1).t - kfList.get(0).t)));
+            }
             for (int i = 0; i < pathList.size(); i++) {
                 canvas.drawPath(pathList.get(i), pathPaintList.get(i));
             }

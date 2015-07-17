@@ -4,7 +4,7 @@
     <string name="ble_not_supported">BLE is not supported</string>
     <string-array name="array_list_mac">
         <item>54:4A:16:78:10:99</item>
-        <item>E1:9E:80:D1:F2:46</item>
+        <item>Orpheo-00087</item>
         <item>54:4A:16:70:C7:E0</item>
         <item>54:4A:16:70:35:01</item>
         <item>54:4A:16:70:C5:CD</item>
